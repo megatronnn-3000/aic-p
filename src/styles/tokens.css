@@ -1,0 +1,88 @@
+/* Design tokens — derived from the AIC MUJ identity: near-black ink, AIC orange,
+   warm paper neutrals. Contrast of every text/background pair is >= 4.5:1. */
+:root {
+  /* Ink (text, dark surfaces) */
+  --ink-900: #151515;
+  --ink-800: #262523;
+  --ink-700: #3B3935;
+  --ink-600: #5C5853;
+  --ink-500: #6F6A64;
+  --ink-400: #9C968F;
+  --ink-300: #C9C3BB;
+
+  /* Paper (backgrounds, borders) */
+  --paper: #F7F5F2;
+  --surface: #FFFFFF;
+  --surface-sunken: #FAF8F5;
+  --line: #E7E2DB;
+  --line-strong: #D5CEC4;
+  --hover: #F2EFEA;
+
+  /* Brand */
+  --orange-500: #F47920;
+  --orange-600: #E8690F;
+  --orange-700: #B4500B;
+  --orange-100: #FCE2CC;
+  --orange-50: #FEF3EA;
+
+  /* Status */
+  --green-700: #17663A;
+  --green-500: #2E9A5B;
+  --green-50: #E7F4EC;
+  --amber-700: #8A5A00;
+  --amber-500: #D99A1E;
+  --amber-50: #FDF3DC;
+  --red-700: #B42318;
+  --red-500: #D9473B;
+  --red-50: #FDECEA;
+  --blue-700: #1F5FAD;
+  --blue-500: #3B7DD8;
+  --blue-50: #EAF2FC;
+  --neutral-700: #4B4741;
+  --neutral-50: #EFEBE6;
+
+  /* Type */
+  --font-display: "Jost", "Futura", "Century Gothic", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 16px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
+  --text-3xl: 36px;
+  --text-4xl: 46px;
+
+  /* Space (4px grid) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+  --s-16: 64px;
+  --s-20: 80px;
+
+  /* Shape */
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-full: 999px;
+  --shadow-sm: 0 1px 2px rgba(21, 21, 21, 0.05);
+  --shadow-md: 0 2px 4px rgba(21, 21, 21, 0.04), 0 8px 24px rgba(21, 21, 21, 0.06);
+  --shadow-lg: 0 24px 64px rgba(21, 21, 21, 0.2);
+
+  /* Motion */
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --t-fast: 120ms var(--ease);
+  --t-med: 200ms var(--ease);
+
+  /* Layout */
+  --sidebar-w: 256px;
+  --content-max: 1200px;
+  --focus: 0 0 0 3px rgba(244, 121, 32, 0.45);
+}

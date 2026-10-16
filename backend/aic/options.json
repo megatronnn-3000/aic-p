@@ -1,0 +1,103 @@
+{
+  "_comment": "Single source of truth for choice lists. Imported by the Flask validators and by the React forms so the two can never drift apart.",
+  "gender": ["Female", "Male", "Other", "Prefer not to say"],
+  "yesNo": ["Yes", "No"],
+  "companyTypes": ["Not Registered", "Proprietorship", "Partnership", "LLP", "Private Limited"],
+  "sectors": [
+    "Agriculture and Allied Fields",
+    "AI / ML / Big Data Analytics",
+    "Drones",
+    "Education",
+    "Fintech",
+    "Health and Pharmaceuticals",
+    "IoT and Information & Communication Technology (ICT)",
+    "Manufacturing and Engineering",
+    "Metaverse / Immersive Technology",
+    "Sustainability / Recycling",
+    "Textile & Apparels",
+    "Toys & Games",
+    "Other"
+  ],
+  "preIncubationStages": ["Idea", "Prototype", "MVP", "Early Revenue", "Growth"],
+  "incubateeLevels": [
+    "Ideation",
+    "Proof of Concept (PoC)",
+    "Prototype",
+    "Minimum Viable Product (MVP)",
+    "Commercialized"
+  ],
+  "operationalModels": ["Product Manufacturing", "Service Delivery", "Aggregation Platform"],
+  "programTypes": ["Incubation support", "Fundraising support", "Networking support", "Mentorship support"],
+  "govtProgrammes": [
+    "Women Empowerment",
+    "Make in India",
+    "Swachh Bharat",
+    "Startup India Stand Up India",
+    "Beti Bachao Beti Padhao",
+    "None of the above"
+  ],
+  "sdgGoals": [
+    "No poverty",
+    "Zero hunger",
+    "Good health and well-being",
+    "Quality education",
+    "Gender equality",
+    "Clean water and sanitation",
+    "Affordable and clean energy",
+    "Decent work and economic growth",
+    "Industry, innovation and infrastructure",
+    "Reduced inequalities",
+    "Sustainable cities and communities",
+    "Responsible consumption and production",
+    "Climate action",
+    "Life below water",
+    "Life on land",
+    "Peace, justice and strong institutions",
+    "Partnerships for the goals"
+  ],
+  "yearsOfStudy": ["First Year", "Second Year", "Third Year", "Fourth Year", "Fifth Year"],
+  "internshipRoles": ["Operations", "Marketing", "Tech", "Design", "Content", "HR"],
+  "hostellerStatus": ["Hosteller", "Day Scholar"],
+  "startupStages": ["Ideation Stage", "Pre-Seed Stage", "Seed Stage", "Early Growth (Series A and B)", "Scaling"],
+  "trlLevels": ["TRL 1", "TRL 2", "TRL 3", "TRL 4", "TRL 5", "TRL 6", "TRL 7", "TRL 8", "TRL 9"],
+  "recordStatuses": ["Open", "In Progress", "Completed", "Closed"],
+  "enquiryPrograms": {
+    "preincubation": "Pre-Incubation",
+    "incubation": "Incubation",
+    "internship": "Internship"
+  },
+  "statuses": {
+    "preincubation": ["Pending", "Approved", "Graduated", "Rejected"],
+    "incubation": ["Pending", "Approved", "Rejected"],
+    "internship": ["Applied", "Selected", "Rejected", "Completed"]
+  },
+  "graduatedStartupStage": "Scaling",
+  "preIncubationCriteria": [
+    { "key": "businessPlan", "label": "Business plan", "description": "Value proposition, market potential, industry attractiveness, potential social and strategic national impact, ethics." },
+    { "key": "mvp", "label": "Minimum viable product", "description": "" },
+    { "key": "marketResearch", "label": "Depth and width of market research", "description": "" },
+    { "key": "innovation", "label": "Innovation / competitive advantage", "description": "" },
+    { "key": "investmentStrategy", "label": "Investment strategy / status", "description": "" },
+    { "key": "scalability", "label": "Scalability", "description": "" },
+    { "key": "technicalFeasibility", "label": "Technical feasibility", "description": "" },
+    { "key": "revenueStrategy", "label": "Revenue strategy", "description": "" },
+    { "key": "skillsOfTeam", "label": "Skills of team", "description": "" }
+  ],
+  "preIncubationScale": ["Poor", "Average", "Good", "Excellent"],
+  "preIncubationRecommendations": ["Pre-Incubation", "Incubation", "On Hold"],
+  "incubationCriteria": [
+    { "key": "targetMarket", "label": "Target market", "short": "Market", "description": "Addressable market is large/growing or a high-priced niche. Customer is well defined." },
+    { "key": "problemNeed", "label": "Problem or need", "short": "Problem", "description": "Problem is real; customer has significant pain or unfulfilled needs." },
+    { "key": "solution", "label": "Solution", "short": "Solution", "description": "Better, faster, cheaper, simpler, higher quality, more efficient or more focused." },
+    { "key": "team", "label": "Team, board & advisors", "short": "Team", "description": "Relevant industry knowledge, skills, leadership and key relationships." },
+    { "key": "traction", "label": "Traction", "short": "Traction", "description": "Planned milestones, MVP built, market validation, user or revenue growth." },
+    { "key": "competition", "label": "Competition vs competitive advantages", "short": "Competition", "description": "Direct vs indirect competition, barriers to entry, proprietary technology." },
+    { "key": "revenueModel", "label": "Revenue model", "short": "Revenue", "description": "Clear revenue model, sales cycle, ARPU, LTV, recurring or one-time." },
+    { "key": "strategy", "label": "Strategy: key expenses / time efforts", "short": "Strategy", "description": "Marketing strategy, cost to acquire and keep customers, partnerships." },
+    { "key": "financialProjections", "label": "Financial projections", "short": "Financials", "description": "Logical, reasonable margins, realistic penetration, shows scalability." },
+    { "key": "exitOpportunity", "label": "Exit opportunity", "short": "Exit", "description": "Acquirers identified, financial buyer, IPO, short vs long term exit." },
+    { "key": "investmentTerms", "label": "Investment terms", "short": "Terms", "description": "Reasonable given stage, size of capital raise and prior investments." },
+    { "key": "overallPresentation", "label": "Overall presentation / Q&A", "short": "Pitch", "description": "Clear, convincing, engaging, handled Q&A effectively, honest." }
+  ],
+  "incubationScaleMax": 5
+}
