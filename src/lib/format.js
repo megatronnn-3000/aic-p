@@ -73,6 +73,13 @@ export function todayIso() {
   return new Date(now.getTime() - offset).toISOString().slice(0, 10);
 }
 
+const inr = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
+
+/** Rupee amount stored as a plain number string, e.g. "2500000" → "₹25,00,000". */
+export function formatAmount(value) {
+  return value === "" || value == null || Number.isNaN(Number(value)) ? "" : inr.format(Number(value));
+}
+
 export function plural(count, word, pluralWord = `${word}s`) {
   return `${count} ${count === 1 ? word : pluralWord}`;
 }

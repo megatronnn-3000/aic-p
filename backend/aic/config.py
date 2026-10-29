@@ -91,6 +91,8 @@ def load_config(overrides=None):
         "MAIL_ASYNC": _bool(env.get("MAIL_ASYNC"), default=True),
         "MAX_FILE_MB": _int(env.get("MAX_FILE_MB"), 20),
         "MAX_REQUEST_MB": _int(env.get("MAX_REQUEST_MB"), 80),
+        # Email providers reject large messages; Brevo and Gmail cap well below 25 MB.
+        "MAX_EMAIL_ATTACHMENT_MB": _int(env.get("MAX_EMAIL_ATTACHMENT_MB"), 10),
         "PUBLIC_SUBMISSIONS_PER_HOUR": _int(env.get("PUBLIC_SUBMISSIONS_PER_HOUR"), 100),
         "LOGIN_ATTEMPTS_PER_15_MIN": _int(env.get("LOGIN_ATTEMPTS_PER_15_MIN"), 8),
     }

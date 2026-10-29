@@ -1,7 +1,9 @@
 import { FileText, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { AicDocuments } from "../../components/AicDocuments";
 import { ConfirmDialog } from "../../components/Dialog";
+import { TabBar } from "../../components/TabBar";
 import { Avatar, Button, Card, ErrorState, LoadingBlock, PageHeader } from "../../components/ui";
 import { api } from "../../lib/api";
 import { formatDate, safeUrl } from "../../lib/format";
@@ -32,14 +34,24 @@ export function StartupDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
-  const { data: startup, error, loading, reload, setData } = useApi(`/api/admin/startups/${id}`);
+  const { data: loaded, error, loading, reload, setData } = useApi(`/api/admin/startups/${id}`);
+  // Older API versions don't send these lists; never let a missing field crash the page.
+  const startup = loaded && { ...loaded, files: loaded.files || [], aic_documents: loaded.aic_documents || [] };
   const [deleting, setDeleting] = useState(false);
+  const [params, setParams] = useSearchParams();
 
   if (error && !startup) return <ErrorState error={error} onRetry={reload} title={error.status === 404 ? "Startup not found" : undefined} />;
   if (loading && !startup) return <LoadingBlock />;
 
   const photo = startup.files.find((f) => f.field === "photo");
   const documents = startup.files.filter((f) => f.field !== "photo");
+  const tabs = [
+    { id: "details", label: "Details" },
+    { id: "documents", label: "Startup's documents", count: documents.length },
+    { id: "aic", label: "Issued by AIC", count: startup.aic_documents.length },
+  ];
+  const activeTab = tabs.some((t) => t.id === params.get("tab")) ? params.get("tab") : "details";
+  const selectTab = (tabId) => setParams(tabId === "details" ? {} : { tab: tabId }, { replace: true });
 
   return (
     <>
@@ -76,27 +88,31 @@ export function StartupDetailPage() {
         }
       />
 
-      <div className="detail-grid">
-        <div className="detail-main stack">
-          {STARTUP_SECTIONS.map((section) => (
-            <Card key={section.id} title={section.title}>
-              <dl className="details">
-                {section.fields.map((field) => {
-                  const shown = value(field, startup[field.name]);
-                  const wide = field.wide && String(startup[field.name] || "").length > 60;
-                  return (
-                    <div key={field.name} className={wide ? "is-wide" : undefined}>
-                      <dt>{field.label}</dt>
-                      <dd className={shown ? undefined : "is-empty"}>{shown || "Not recorded"}</dd>
-                    </div>
-                  );
-                })}
-              </dl>
-            </Card>
-          ))}
-        </div>
-        <aside className="detail-aside stack">
+      <TabBar tabs={tabs} active={activeTab} onSelect={selectTab} label="Startup sections" idPrefix="startup" />
+      <div className="tab-panel" role="tabpanel" id="startup-panel" aria-labelledby={`startup-tab-${activeTab}`}>
+        {activeTab === "details" && (
+          <div className="stack">
+            {STARTUP_SECTIONS.map((section) => (
+              <Card key={section.id} title={section.title}>
+                <dl className="details">
+                  {section.fields.map((field) => {
+                    const shown = value(field, startup[field.name]);
+                    const wide = field.wide && String(startup[field.name] || "").length > 60;
+                    return (
+                      <div key={field.name} className={wide ? "is-wide" : undefined}>
+                        <dt>{field.label}</dt>
+                        <dd className={shown ? undefined : "is-empty"}>{shown || "Not recorded"}</dd>
+                      </div>
+                    );
+                  })}
+                </dl>
+              </Card>
+            ))}
+          </div>
+        )}
+        {activeTab === "documents" && (
           <DocumentsCard
+            title="Startup's documents"
             files={documents}
             labels={FILE_LABELS}
             zipPath={`/api/admin/startups/${startup.id}/documents.zip`}
@@ -108,14 +124,23 @@ export function StartupDetailPage() {
               toast.success(`${file.original_name} deleted.`);
             }}
           />
-        </aside>
+        )}
+        {activeTab === "aic" && (
+          <AicDocuments
+            ownerType="startup"
+            ownerId={startup.id}
+            documents={startup.aic_documents}
+            recipient={startup.email}
+            onChange={(list) => setData((prev) => ({ ...prev, aic_documents: list }))}
+          />
+        )}
       </div>
 
       <ConfirmDialog
         open={deleting}
         onClose={() => setDeleting(false)}
         title={`Delete ${startup.startup_name}?`}
-        description="The startup record and all of its documents are permanently deleted."
+        description="The startup record and all of its documents, including those issued by AIC, are permanently deleted."
         confirmLabel="Delete permanently"
         tone="danger"
         onConfirm={async () => {

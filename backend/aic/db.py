@@ -126,6 +126,8 @@ module_records = Table(
 
 # Every uploaded file, whatever it belongs to. ``owner_type`` is one of
 # preincubation / incubation / internship / startup / record.
+# ``source`` separates what the applicant/startup submitted ("applicant") from
+# documents AIC issues to them ("aic": offer letters, certificates, …).
 files = Table(
     "files",
     metadata,
@@ -138,8 +140,41 @@ files = Table(
     Column("size", Integer, nullable=False),
     Column("storage_key", String(300), nullable=False, unique=True),
     _timestamp("uploaded_at"),
+    Column("source", String(10), nullable=False, default="applicant", server_default="applicant"),
+    Column("title", Text, nullable=True),
+    Column("emailed_at", DateTime, nullable=True),
+    Column("emailed_to", Text, nullable=True),
     Index("ix_files_owner", "owner_type", "owner_id"),
 )
+
+# Investors and mentors linked to a startup. ``owner_type`` is preincubation
+# (an approved pre-incubation application) or startup (an incubated startup).
+startup_investments = Table(
+    "startup_investments",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("owner_type", String(30), nullable=False),
+    Column("owner_id", Integer, nullable=False),
+    *_text_columns(forms.INVESTMENT_FIELDS),
+    _timestamp("created_at"),
+    _timestamp("updated_at"),
+    Index("ix_startup_investments_owner", "owner_type", "owner_id"),
+)
+
+startup_mentors = Table(
+    "startup_mentors",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("owner_type", String(30), nullable=False),
+    Column("owner_id", Integer, nullable=False),
+    *_text_columns(forms.MENTOR_FIELDS),
+    _timestamp("created_at"),
+    _timestamp("updated_at"),
+    Index("ix_startup_mentors_owner", "owner_type", "owner_id"),
+)
+
+FILE_SOURCE_APPLICANT = "applicant"
+FILE_SOURCE_AIC = "aic"
 
 # File contents when STORAGE_BACKEND=database (keeps everything in Postgres,
 # so a free-tier host with an ephemeral disk loses nothing on redeploy).

@@ -65,14 +65,19 @@ def create_app(overrides=None):
         app.logger.info("MAIL_PROVIDER is not set; confirmation and status emails are disabled.")
 
     from .auth import bp as auth_bp
+    from .routes.aic_documents import bp as aic_documents_bp
     from .routes.applications import bp as applications_bp
     from .routes.dashboard import bp as dashboard_bp
     from .routes.files import bp as files_bp
     from .routes.public import bp as public_bp
     from .routes.records import bp as records_bp
     from .routes.startups import bp as startups_bp
+    from .routes.support import bp as support_bp
 
-    for blueprint in (public_bp, auth_bp, dashboard_bp, applications_bp, startups_bp, records_bp, files_bp):
+    for blueprint in (
+        public_bp, auth_bp, dashboard_bp, applications_bp, startups_bp, records_bp, files_bp, aic_documents_bp,
+        support_bp,
+    ):
         app.register_blueprint(blueprint)
 
     @app.get("/")

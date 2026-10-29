@@ -1,8 +1,10 @@
 import { LogIn } from "lucide-react";
-import { Link, Outlet } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import { BrandLockup } from "../components/Brand";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 
 export function PublicLayout() {
+  const { pathname } = useLocation();
   return (
     <div className="public">
       <a href="#main" className="skip-link">
@@ -26,7 +28,9 @@ export function PublicLayout() {
         </div>
       </header>
       <main id="main" className="public-main" tabIndex={-1}>
-        <Outlet />
+        <ErrorBoundary resetKey={pathname}>
+          <Outlet />
+        </ErrorBoundary>
       </main>
       <footer className="public-footer">
         <div className="public-footer__inner">

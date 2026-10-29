@@ -18,6 +18,7 @@ backend/.venv/
 *.db-shm
 *.db-wal
 *.sqlite3
+*.pre-upgrade-backup
 uploads/
 backend/uploads/
 backend/applicant_data/

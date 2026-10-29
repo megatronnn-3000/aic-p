@@ -132,3 +132,27 @@ def pitch_scheduled(mailer, record):
             details,
         ),
     )
+
+
+def document_shared(mailer, owner_type, record, title, attachment):
+    """Send an AIC-issued document (offer letter, certificate, …) to the applicant/startup."""
+    if owner_type == "startup":
+        name, startup = record.get("founder"), record.get("startup_name")
+        details = [("Startup", startup)]
+    else:
+        name, startup = _applicant(owner_type, record)
+        details = [("Reference", db.reference(owner_type, record["id"]))] + ([("Startup", startup)] if startup else [])
+    details.append(("Document", title))
+    mailer.send(
+        record["email"],
+        f"{title} from AIC MUJ",
+        render_email(
+            title,
+            [
+                f"Hello {name or 'there'},",
+                f"AIC MUJ Incubation Foundation has shared a document with you: {title}. It is attached to this email.",
+            ],
+            details,
+        ),
+        attachments=[attachment],
+    )

@@ -3,24 +3,32 @@ import {
   ClipboardCheck,
   Download,
   FileArchive,
+  FileBadge,
+  Files,
+  HandCoins,
   Mail,
+  Mic,
   Phone,
   Plus,
   Printer,
   Trash2,
+  UserRoundCheck,
   Users,
 } from "lucide-react";
 import { useRef, useState } from "react";
-import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
+import { Link, useNavigate, useOutletContext, useParams, useSearchParams } from "react-router-dom";
+import { AicDocuments } from "../../components/AicDocuments";
 import { PrintBrand } from "../../components/Brand";
 import { ConfirmDialog } from "../../components/Dialog";
 import { FileList } from "../../components/FileList";
+import { StartupSupport } from "../../components/StartupSupport";
+import { TabBar } from "../../components/TabBar";
 import { TextField } from "../../components/fields";
 import { Button, Card, EmptyState, ErrorState, LoadingBlock, PageHeader, StatusBadge, Switch } from "../../components/ui";
 import { api, downloadFile } from "../../lib/api";
-import { formatDate, formatDateTime, formatTime, safeUrl } from "../../lib/format";
+import { formatAmount, formatDate, formatDateTime, formatTime, safeUrl } from "../../lib/format";
 import { FORMS_BY_KEY, allFields, isVisible } from "../../lib/formSchemas";
-import options, { PROGRAMS } from "../../lib/options";
+import options, { PROGRAMS, STATUS_LABEL } from "../../lib/options";
 import { exportElementToPdf } from "../../lib/pdf";
 import { useToast } from "../../lib/toast-context";
 import { useApi } from "../../lib/useApi";
@@ -67,6 +75,13 @@ const EMAILED = {
   internship: ["Selected", "Rejected"],
 };
 
+// Key facts shown on the Overview tab.
+const SUMMARY_FIELDS = {
+  preincubation: ["startup_name", "name", "founder_name", "email", "contact_number", "sector", "startup_stage", "company_type"],
+  incubation: ["startup_name", "founder_name", "email", "mobile_no", "sector", "incubatee_level", "city", "state"],
+  internship: ["name", "email", "phone", "department", "year_of_study", "preferred_role", "hosteller_status", "willing_late"],
+};
+
 function displayValue(field, value) {
   if (value === undefined || value === null || value === "") return null;
   if (field.type === "date") return formatDate(value);
@@ -83,29 +98,55 @@ function displayValue(field, value) {
   return value;
 }
 
-function RecordSections({ form, record }) {
-  return form.steps.map((step) => {
-    const fields = step.fields.filter((f) => f.type !== "file" && isVisible(f, record));
-    if (!fields.length) return null;
-    return (
-      <Card key={step.id} title={step.title}>
-        <dl className="details">
-          {fields.map((field) => {
-            const value = displayValue(field, record[field.name]);
-            // Long answers get a full row; short or empty ones share rows.
-            const raw = String(record[field.name] || "");
-            const wide = field.type === "textarea" ? raw.length > 60 : field.wide && raw.length > 40;
-            return (
-              <div key={field.name} className={wide ? "is-wide" : undefined}>
-                <dt>{field.label}</dt>
-                <dd className={value ? undefined : "is-empty"}>{value || "Not provided"}</dd>
-              </div>
-            );
-          })}
-        </dl>
-      </Card>
-    );
+function sectionFields(step, record) {
+  return step.fields.filter((f) => f.type !== "file" && isVisible(f, record));
+}
+
+function FieldList({ fields, record }) {
+  return (
+    <dl className="details">
+      {fields.map((field) => {
+        const value = displayValue(field, record[field.name]);
+        // Long answers get a full row; short or empty ones share rows.
+        const raw = String(record[field.name] || "");
+        const wide = field.type === "textarea" ? raw.length > 60 : field.wide && raw.length > 40;
+        return (
+          <div key={field.name} className={wide ? "is-wide" : undefined}>
+            <dt>{field.label}</dt>
+            <dd className={value ? undefined : "is-empty"}>{value || "Not provided"}</dd>
+          </div>
+        );
+      })}
+    </dl>
+  );
+}
+
+function SectionCard({ step, record }) {
+  return (
+    <Card title={step.title}>
+      <FieldList fields={sectionFields(step, record)} record={record} />
+    </Card>
+  );
+}
+
+/** Pre-incubated (or graduated) startups track their investors and mentors. */
+function inProgram(programKey, record) {
+  return programKey === "preincubation" && ["Approved", "Graduated"].includes(record.status);
+}
+
+function buildTabs(programKey, form, record) {
+  const tabs = [{ id: "overview", label: "Overview" }];
+  form.steps.forEach((step) => {
+    if (sectionFields(step, record).length) tabs.push({ id: step.id, label: step.title, step });
   });
+  tabs.push({ id: "documents", label: "Submitted documents", count: record.files.length });
+  if (programKey === "preincubation") tabs.push({ id: "pitch", label: "Pitch" }, { id: "evaluation", label: "Evaluation" });
+  if (inProgram(programKey, record)) {
+    tabs.push({ id: "investors", label: "Investors", count: record.investors.length }, { id: "mentors", label: "Mentors", count: record.mentors.length });
+  }
+  if (programKey === "incubation") tabs.push({ id: "evaluations", label: "Evaluations", count: record.eval_count });
+  tabs.push({ id: "aic", label: "Issued by AIC", count: record.aic_documents.length });
+  return tabs;
 }
 
 export function ApplicationDetailPage({ program: programKey }) {
@@ -114,8 +155,11 @@ export function ApplicationDetailPage({ program: programKey }) {
   const form = FORMS_BY_KEY[programKey];
   const navigate = useNavigate();
   const toast = useToast();
+  const [params, setParams] = useSearchParams();
   const { refreshCounts } = useOutletContext() || {};
-  const { data: record, error, loading, reload, setData } = useApi(`/api/admin/${programKey}/applications/${id}`);
+  const { data: loaded, error, loading, reload, setData } = useApi(`/api/admin/${programKey}/applications/${id}`);
+  // Older API versions don't send these lists; never let a missing field crash the page.
+  const record = loaded && { ...loaded, files: loaded.files || [], aic_documents: loaded.aic_documents || [], evaluations: loaded.evaluations || [], investors: loaded.investors || [], mentors: loaded.mentors || [] };
   const [transition, setTransition] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
@@ -130,6 +174,16 @@ export function ApplicationDetailPage({ program: programKey }) {
   const title = record.startup_name || record.name;
   const fileLabels = Object.fromEntries(allFields(form).map((f) => [f.name, f.label]));
   const phone = record.contact_number || record.mobile_no || record.phone;
+  const tabs = buildTabs(programKey, form, record);
+  const activeTab = tabs.some((t) => t.id === params.get("tab")) ? params.get("tab") : "overview";
+  const current = tabs.find((t) => t.id === activeTab);
+
+  const selectTab = (tabId) => {
+    const next = new URLSearchParams(params);
+    if (tabId === "overview") next.delete("tab");
+    else next.set("tab", tabId);
+    setParams(next, { replace: true });
+  };
 
   const patch = async (changes, message) => {
     try {
@@ -154,6 +208,59 @@ export function ApplicationDetailPage({ program: programKey }) {
       setPdfBusy(false);
     }
   };
+
+  let panel;
+  if (activeTab === "overview") {
+    panel = (
+      <Overview
+        programKey={programKey}
+        form={form}
+        record={record}
+        onSelectTab={selectTab}
+        onPatch={patch}
+        onDelete={() => setDeleting(true)}
+      />
+    );
+  } else if (current?.step) {
+    panel = <SectionCard step={current.step} record={record} />;
+  } else if (activeTab === "documents") {
+    panel = (
+      <DocumentsCard
+        title="Submitted documents"
+        files={record.files}
+        labels={fileLabels}
+        zipPath={`/api/admin/${programKey}/applications/${id}/documents.zip`}
+        zipName={`${record.reference} documents.zip`}
+      />
+    );
+  } else if (activeTab === "pitch") {
+    panel = <PitchCard record={record} onSave={patch} />;
+  } else if (activeTab === "evaluation") {
+    panel = <PreEvaluationCard record={record} />;
+  } else if (activeTab === "evaluations") {
+    panel = <IncubationEvaluationsCard record={record} onChanged={reload} />;
+  } else if (activeTab === "investors" || activeTab === "mentors") {
+    panel = (
+      <StartupSupport
+        key={activeTab}
+        kind={activeTab}
+        ownerType={programKey}
+        ownerId={record.id}
+        entries={record[activeTab]}
+        onChange={(list) => setData((prev) => ({ ...prev, [activeTab]: list }))}
+      />
+    );
+  } else if (activeTab === "aic") {
+    panel = (
+      <AicDocuments
+        ownerType={programKey}
+        ownerId={record.id}
+        documents={record.aic_documents}
+        recipient={record.email}
+        onChange={(list) => setData((prev) => ({ ...prev, aic_documents: list }))}
+      />
+    );
+  }
 
   return (
     <>
@@ -185,75 +292,48 @@ export function ApplicationDetailPage({ program: programKey }) {
               </Button>
             ))}
             <Button iconOnly icon={Printer} onClick={() => window.print()}>
-              Print
+              Print full application
             </Button>
             <Button iconOnly icon={Download} onClick={savePdf} loading={pdfBusy}>
-              Download PDF
+              Download full application as PDF
             </Button>
           </>
         }
       />
 
-      <div className="detail-grid">
-        <div className="detail-main stack" ref={printRef}>
-          <div className="print-only">
-            <PrintBrand />
-            <h1 className="print-title">
-              {title} <span className="muted">· {record.reference}</span>
-            </h1>
-          </div>
-          <RecordSections form={form} record={record} />
+      <TabBar tabs={tabs} active={activeTab} onSelect={selectTab} label="Application sections" idPrefix="app" />
+      <div className="tab-panel no-print" role="tabpanel" id="app-panel" aria-labelledby={`app-tab-${activeTab}`}>
+        {panel}
+      </div>
+
+      {/* The complete application for Print / PDF, whichever tab is open.
+          Kept off-screen (not display:none) so the PDF renderer can draw it. */}
+      <div className="print-record" ref={printRef} aria-hidden="true" inert>
+        <PrintBrand />
+        <h1 className="print-title">
+          {title} <span className="muted">· {record.reference}</span>
+        </h1>
+        <p className="print-meta">
+          {STATUS_LABEL[programKey][record.status] || record.status} · Submitted {formatDateTime(record.submitted_at)}
+        </p>
+        <div className="stack">
+          {form.steps
+            .filter((step) => sectionFields(step, record).length)
+            .map((step) => (
+              <SectionCard key={step.id} step={step} record={record} />
+            ))}
+          {record.files.length > 0 && (
+            <Card title="Submitted documents">
+              <ul className="print-files">
+                {record.files.map((f) => (
+                  <li key={f.id}>
+                    <strong>{fileLabels[f.field] || f.field}:</strong> {f.original_name}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
         </div>
-
-        <aside className="detail-aside stack no-print">
-          {programKey === "preincubation" && <PitchCard record={record} onSave={patch} />}
-          {programKey === "preincubation" && <PreEvaluationCard record={record} />}
-          {programKey === "incubation" && <IncubationEvaluationsCard record={record} onChanged={reload} />}
-          {programKey === "preincubation" && ["Approved", "Graduated"].includes(record.status) && (
-            <Card title="Program">
-              <div className="stack">
-                <Switch
-                  checked={record.is_active}
-                  label="Active in the program"
-                  onChange={(value) => patch({ is_active: value }, `Marked ${value ? "active" : "inactive"}.`).catch(() => {})}
-                />
-                <Switch
-                  checked={record.certificate_issued}
-                  label="Certificate issued"
-                  onChange={(value) =>
-                    patch({ certificate_issued: value }, value ? "Certificate marked as issued." : "Certificate marked as not issued.").catch(() => {})
-                  }
-                />
-              </div>
-            </Card>
-          )}
-          {programKey === "incubation" && record.status === "Approved" && (
-            <Card title="Incubation record">
-              <p className="muted" style={{ marginBottom: 12 }}>
-                Create the startup's incubation record, pre-filled from this application.
-              </p>
-              <Button as={Link} to={`/admin/incubation/startups/new?from=${record.id}`} icon={Building2} block>
-                Create startup record
-              </Button>
-            </Card>
-          )}
-
-          <DocumentsCard
-            files={record.files}
-            labels={fileLabels}
-            zipPath={`/api/admin/${programKey}/applications/${id}/documents.zip`}
-            zipName={`${record.reference} documents.zip`}
-          />
-
-          <Card title="Delete application" className="danger-card">
-            <p className="muted" style={{ marginBottom: 12 }}>
-              Permanently removes this application{programKey === "incubation" ? ", its documents and evaluations" : " and its documents"}.
-            </p>
-            <Button variant="danger-ghost" icon={Trash2} onClick={() => setDeleting(true)}>
-              Delete application
-            </Button>
-          </Card>
-        </aside>
       </div>
 
       {transition && (
@@ -277,7 +357,7 @@ export function ApplicationDetailPage({ program: programKey }) {
         open={deleting}
         onClose={() => setDeleting(false)}
         title={`Delete ${title}?`}
-        description="This permanently deletes the application and all of its documents. It can't be undone."
+        description="This permanently deletes the application and all of its documents, including those issued by AIC. It can't be undone."
         confirmLabel="Delete permanently"
         tone="danger"
         onConfirm={async () => {
@@ -296,12 +376,154 @@ export function ApplicationDetailPage({ program: programKey }) {
   );
 }
 
-export function DocumentsCard({ files, labels, zipPath, zipName, onDelete, emptyText = "No documents were attached." }) {
+function OverviewTile({ icon: Icon, label, value, hint, onClick }) {
+  return (
+    <button type="button" className="overview-tile" onClick={onClick}>
+      <span className="overview-tile__label">
+        <Icon aria-hidden="true" />
+        {label}
+      </span>
+      <span className="overview-tile__value">{value}</span>
+      {hint && <span className="overview-tile__hint">{hint}</span>}
+    </button>
+  );
+}
+
+function Overview({ programKey, form, record, onSelectTab, onPatch, onDelete }) {
+  const fields = allFields(form);
+  const summary = SUMMARY_FIELDS[programKey].map((name) => fields.find((f) => f.name === name)).filter(Boolean);
+  const emailedCount = record.aic_documents.filter((d) => d.emailed_at).length;
+  const raised = record.investors.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+  const activeMentors = record.mentors.filter((m) => m.status !== "Completed").length;
+  const preMax = options.preIncubationCriteria.length * options.preIncubationScale.length;
+  const incMax = options.incubationCriteria.length * options.incubationScaleMax;
+
+  return (
+    <div className="stack">
+      <div className="overview-tiles">
+        <OverviewTile
+          icon={Files}
+          label="Submitted documents"
+          value={record.files.length}
+          hint={record.files.length ? "View and download" : "None attached"}
+          onClick={() => onSelectTab("documents")}
+        />
+        {programKey === "preincubation" && (
+          <OverviewTile
+            icon={Mic}
+            label="Pitch"
+            value={record.pitch_date ? formatDate(record.pitch_date) : "Not scheduled"}
+            hint={record.pitch_time ? formatTime(record.pitch_time) : "Schedule a pitch"}
+            onClick={() => onSelectTab("pitch")}
+          />
+        )}
+        {programKey === "preincubation" && (
+          <OverviewTile
+            icon={ClipboardCheck}
+            label="Evaluation"
+            value={record.evaluation ? `${record.evaluation_total} / ${preMax}` : "Not evaluated"}
+            hint={record.evaluation?.finalRecommendation || (record.evaluation ? "No recommendation" : "Start the evaluation")}
+            onClick={() => onSelectTab("evaluation")}
+          />
+        )}
+        {programKey === "incubation" && (
+          <OverviewTile
+            icon={Users}
+            label="Evaluations"
+            value={record.eval_count ? `${record.eval_avg} / ${incMax}` : "None yet"}
+            hint={
+              record.eval_count
+                ? `Average of ${record.eval_count} evaluator${record.eval_count === 1 ? "" : "s"}`
+                : "Add the first evaluation"
+            }
+            onClick={() => onSelectTab("evaluations")}
+          />
+        )}
+        {inProgram(programKey, record) && (
+          <OverviewTile
+            icon={HandCoins}
+            label="Investors"
+            value={record.investors.length || "None yet"}
+            hint={raised ? `${formatAmount(raised)} raised` : "Record an investment"}
+            onClick={() => onSelectTab("investors")}
+          />
+        )}
+        {inProgram(programKey, record) && (
+          <OverviewTile
+            icon={UserRoundCheck}
+            label="Mentors"
+            value={record.mentors.length || "None yet"}
+            hint={record.mentors.length ? `${activeMentors} active` : "Assign a mentor"}
+            onClick={() => onSelectTab("mentors")}
+          />
+        )}
+        <OverviewTile
+          icon={FileBadge}
+          label="Issued by AIC"
+          value={record.aic_documents.length}
+          hint={record.aic_documents.length ? `${emailedCount} emailed` : "Letters & certificates"}
+          onClick={() => onSelectTab("aic")}
+        />
+      </div>
+
+      <Card title="Summary" subtitle="Key details — use the buttons above to open each section of the application.">
+        <FieldList fields={summary} record={record} />
+      </Card>
+
+      {programKey === "preincubation" && ["Approved", "Graduated"].includes(record.status) && (
+        <Card title="Program">
+          <div className="row row--wrap" style={{ gap: 24 }}>
+            <Switch
+              checked={record.is_active}
+              label="Active in the program"
+              onChange={(value) => onPatch({ is_active: value }, `Marked ${value ? "active" : "inactive"}.`).catch(() => {})}
+            />
+            <Switch
+              checked={record.certificate_issued}
+              label="Certificate issued"
+              onChange={(value) =>
+                onPatch(
+                  { certificate_issued: value },
+                  value ? "Certificate marked as issued." : "Certificate marked as not issued.",
+                ).catch(() => {})
+              }
+            />
+          </div>
+        </Card>
+      )}
+
+      {programKey === "incubation" && record.status === "Approved" && (
+        <Card title="Incubation record">
+          <div className="row row--wrap overview-row">
+            <p className="muted">Create the startup's incubation record, pre-filled from this application.</p>
+            <Button as={Link} to={`/admin/incubation/startups/new?from=${record.id}`} icon={Building2}>
+              Create startup record
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      <Card title="Delete application" className="danger-card">
+        <div className="row row--wrap overview-row">
+          <p className="muted">
+            Permanently removes this application
+            {programKey === "incubation" ? ", its documents and evaluations" : " and its documents"}.
+          </p>
+          <Button variant="danger-ghost" icon={Trash2} onClick={onDelete}>
+            Delete application
+          </Button>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+export function DocumentsCard({ title = "Documents", files, labels, zipPath, zipName, onDelete, emptyText = "No documents were attached." }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   return (
     <Card
-      title="Documents"
+      title={title}
       subtitle={files.length ? `${files.length} file${files.length === 1 ? "" : "s"}` : undefined}
       actions={
         files.length > 1 && (

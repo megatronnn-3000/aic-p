@@ -228,6 +228,27 @@ PITCH_FIELDS = [
     Field("pitch_link", "Meeting link", kind="url"),
 ]
 
+INVESTMENT_FIELDS = [
+    Field("investor_name", "Investor name", required=True, max_length=150),
+    Field("investor_type", "Investor type", choices=OPTIONS["investorTypes"]),
+    Field("instrument", "Instrument", choices=OPTIONS["investmentInstruments"]),
+    Field("amount", "Amount (₹)", kind="amount"),
+    Field("invested_on", "Date of investment", kind="past_date"),
+    Field("contact_email", "Investor email", kind="email"),
+    Field("notes", "Notes", kind="long"),
+]
+
+MENTOR_FIELDS = [
+    Field("mentor_name", "Mentor name", required=True, max_length=150),
+    Field("expertise", "Area of expertise", max_length=200),
+    Field("organisation", "Organisation / designation", max_length=200),
+    Field("email", "Email", kind="email"),
+    Field("phone", "Phone", kind="phone"),
+    Field("assigned_on", "Assigned on", kind="date"),
+    Field("status", "Status", choices=OPTIONS["mentorStatuses"]),
+    Field("notes", "Notes", kind="long"),
+]
+
 RECORD_MODULES = {
     "enquiry": ["preincubation", "incubation", "internship"],
     "events": ["upcoming", "past", "registrations"],
@@ -310,6 +331,15 @@ def validate(fields, source, partial=False):
                     errors[field.name] = f"{field.label} can't be in the future"
             except ValueError:
                 errors[field.name] = f"{field.label} must be a valid date"
+        elif field.kind == "amount":
+            number = value.replace(",", "").replace("₹", "").strip()
+            try:
+                parsed = float(number)
+                if parsed < 0 or parsed != parsed or parsed == float("inf"):
+                    raise ValueError
+                value = number
+            except ValueError:
+                errors[field.name] = f"{field.label} must be a number, e.g. 2500000"
         elif field.kind == "time":
             if not re.match(r"^([01]\d|2[0-3]):[0-5]\d$", value):
                 errors[field.name] = f"{field.label} must be a valid time (HH:MM)"

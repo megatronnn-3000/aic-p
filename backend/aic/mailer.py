@@ -10,6 +10,7 @@
 Delivery never blocks or fails a request: messages are sent on a background
 thread and failures are logged.
 """
+import base64
 import html
 import json
 import smtplib
@@ -34,19 +35,22 @@ class Mailer:
     def enabled(self):
         return bool(self.provider)
 
-    def send(self, to, subject, body_html):
+    def send(self, to, subject, body_html, attachments=None):
+        """Queue an email. ``attachments``: list of dicts with filename, content (bytes), content_type."""
         if not self.enabled or not to:
             return
+        attachments = attachments or []
         if self.config["MAIL_ASYNC"] and self.provider != "console":
-            threading.Thread(target=self._deliver, args=(to, subject, body_html), daemon=True).start()
+            threading.Thread(target=self._deliver, args=(to, subject, body_html, attachments), daemon=True).start()
         else:
-            self._deliver(to, subject, body_html)
+            self._deliver(to, subject, body_html, attachments)
 
-    def _deliver(self, to, subject, body_html):
+    def _deliver(self, to, subject, body_html, attachments=()):
         try:
             if self.provider == "console":
-                self.sent.append({"to": to, "subject": subject, "html": body_html})
-                self.logger.info("[mail:console] to=%s subject=%s", to, subject)
+                names = [a["filename"] for a in attachments]
+                self.sent.append({"to": to, "subject": subject, "html": body_html, "attachments": names})
+                self.logger.info("[mail:console] to=%s subject=%s attachments=%s", to, subject, names)
             elif self.provider == "brevo":
                 self._post_json(
                     "https://api.brevo.com/v3/smtp/email",
@@ -56,6 +60,11 @@ class Mailer:
                         "to": [{"email": to}],
                         "subject": subject,
                         "htmlContent": body_html,
+                        **(
+                            {"attachment": [{"name": a["filename"], "content": _b64(a)} for a in attachments]}
+                            if attachments
+                            else {}
+                        ),
                     },
                 )
             elif self.provider == "resend":
@@ -67,10 +76,15 @@ class Mailer:
                         "to": [to],
                         "subject": subject,
                         "html": body_html,
+                        **(
+                            {"attachments": [{"filename": a["filename"], "content": _b64(a)} for a in attachments]}
+                            if attachments
+                            else {}
+                        ),
                     },
                 )
             elif self.provider == "smtp":
-                self._send_smtp(to, subject, body_html)
+                self._send_smtp(to, subject, body_html, attachments)
             else:
                 self.logger.error("Unknown MAIL_PROVIDER '%s'; email to %s not sent", self.provider, to)
                 return
@@ -93,13 +107,16 @@ class Mailer:
             detail = exc.read().decode("utf-8", "replace")[:300]
             raise RuntimeError(f"HTTP {exc.code}: {detail}") from exc
 
-    def _send_smtp(self, to, subject, body_html):
+    def _send_smtp(self, to, subject, body_html, attachments=()):
         message = EmailMessage()
         message["From"] = f"{self.config['MAIL_FROM_NAME']} <{self.config['MAIL_FROM']}>"
         message["To"] = to
         message["Subject"] = subject
         message.set_content("This message requires an HTML-capable email client.")
         message.add_alternative(body_html, subtype="html")
+        for item in attachments:
+            maintype, _, subtype = (item.get("content_type") or "application/octet-stream").partition("/")
+            message.add_attachment(item["content"], maintype=maintype, subtype=subtype or "octet-stream", filename=item["filename"])
         host, port = self.config["SMTP_HOST"], self.config["SMTP_PORT"]
         context = ssl.create_default_context()
         if port == 465:
@@ -111,6 +128,10 @@ class Mailer:
             if self.config["SMTP_USERNAME"]:
                 server.login(self.config["SMTP_USERNAME"], self.config["SMTP_PASSWORD"])
             server.send_message(message)
+
+
+def _b64(attachment):
+    return base64.b64encode(attachment["content"]).decode("ascii")
 
 
 def render_email(heading, paragraphs, details=None, closing="Regards,<br><strong>AIC MUJ Incubation Foundation</strong>"):

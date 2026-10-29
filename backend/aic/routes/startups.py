@@ -4,6 +4,7 @@ from sqlalchemy import delete, func, insert, select, update
 
 from .. import db, forms, storage
 from ..auth import require_admin
+from . import support
 from .common import error, max_file_bytes, svc, validation_error
 
 bp = Blueprint("startups", __name__, url_prefix="/api/admin/startups")
@@ -19,6 +20,7 @@ def _detail(conn, startup_id):
         return None
     item = db.serialize(row)
     item["files"] = storage.list_files(conn, OWNER, startup_id)
+    item["aic_documents"] = storage.list_files(conn, OWNER, startup_id, source=db.FILE_SOURCE_AIC)
     item["graduated"] = row.stage == GRADUATED_STAGE
     return item
 
@@ -36,7 +38,7 @@ def list_startups():
         rows = conn.execute(select(t).order_by(t.c.id.desc())).all()
         file_rows = conn.execute(
             select(db.files.c.owner_id, db.files.c.field, func.max(db.files.c.id), func.count(db.files.c.id))
-            .where(db.files.c.owner_type == OWNER)
+            .where(db.files.c.owner_type == OWNER, db.files.c.source == db.FILE_SOURCE_APPLICANT)
             .group_by(db.files.c.owner_id, db.files.c.field)
         ).all()
     photos, doc_counts = {}, {}
@@ -131,6 +133,7 @@ def delete_startup(startup_id):
         if conn.execute(select(t.c.id).where(t.c.id == startup_id)).first() is None:
             return error("Startup not found.", 404)
         storage.delete_owner_files(conn, services.storage, OWNER, startup_id)
+        support.delete_owner_entries(conn, OWNER, startup_id)
         conn.execute(delete(t).where(t.c.id == startup_id))
     return jsonify(ok=True)
 

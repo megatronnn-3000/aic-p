@@ -11,6 +11,8 @@ export async function exportElementToPdf(element, filename, { landscape = false 
     backgroundColor: "#ffffff",
     ignoreElements: (el) => el.classList?.contains("no-print"),
     onclone: (doc) => {
+      // Reveal print-only headers (logos) in the PDF, as in a real print.
+      doc.documentElement.classList.add("pdf-export");
       // html2canvas renders attribute values, not live form state.
       doc.querySelectorAll("input").forEach((input) => {
         if (input.type === "checkbox" || input.type === "radio") {
@@ -30,7 +32,7 @@ export async function exportElementToPdf(element, filename, { landscape = false 
     },
   });
 
-  const pdf = new jsPDF(landscape ? "l" : "p", "mm", "a4");
+  const pdf = new jsPDF({ orientation: landscape ? "l" : "p", unit: "mm", format: "a4", compress: true });
   const margin = 10;
   const pageWidth = pdf.internal.pageSize.getWidth() - margin * 2;
   const pageHeight = pdf.internal.pageSize.getHeight() - margin * 2;
@@ -45,7 +47,8 @@ export async function exportElementToPdf(element, filename, { landscape = false 
     slice.height = Math.min(sliceHeightPx, canvas.height - y);
     slice.getContext("2d").drawImage(canvas, 0, y, canvas.width, slice.height, 0, 0, canvas.width, slice.height);
     if (page > 0) pdf.addPage();
-    pdf.addImage(slice.toDataURL("image/png"), "PNG", margin, margin, pageWidth, slice.height / pxPerMm);
+    // JPEG keeps a multi-page document to a few hundred KB (PNG made it tens of MB).
+    pdf.addImage(slice.toDataURL("image/jpeg", 0.85), "JPEG", margin, margin, pageWidth, slice.height / pxPerMm, undefined, "FAST");
   }
 
   pdf.save(filename);

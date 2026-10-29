@@ -6,6 +6,7 @@ from sqlalchemy import delete, func, select, update
 
 from .. import db, forms, notifications, storage
 from ..auth import require_admin
+from . import support
 from .common import PROGRAMS, error, json_body, svc, validation_error
 
 bp = Blueprint("applications", __name__, url_prefix="/api/admin")
@@ -59,7 +60,7 @@ def _incubation_eval_stats(conn, application_id=None):
 def _file_counts(conn, owner_type):
     rows = conn.execute(
         select(db.files.c.owner_id, func.count(db.files.c.id))
-        .where(db.files.c.owner_type == owner_type)
+        .where(db.files.c.owner_type == owner_type, db.files.c.source == db.FILE_SOURCE_APPLICANT)
         .group_by(db.files.c.owner_id)
     )
     return dict(rows.all())
@@ -83,9 +84,12 @@ def _detail(conn, program, record_id):
     item = db.serialize(row)
     item["reference"] = db.reference(program.key, record_id)
     item["files"] = storage.list_files(conn, program.key, record_id)
+    item["aic_documents"] = storage.list_files(conn, program.key, record_id, source=db.FILE_SOURCE_AIC)
     if program.key == "preincubation":
         item["evaluation"] = _parse_json(row.evaluation)
         item["evaluation_total"] = _score_total((item["evaluation"] or {}).get("scores", {})) if item["evaluation"] else None
+        item["investors"] = support.list_entries(conn, "investors", program.key, record_id)
+        item["mentors"] = support.list_entries(conn, "mentors", program.key, record_id)
     if program.key == "incubation":
         item["evaluations"] = _evaluations(conn, record_id)
         count, avg = _incubation_eval_stats(conn, record_id).get(record_id, (0, None))
@@ -204,6 +208,8 @@ def delete_application(program_key, record_id):
         if exists is None:
             return error("Application not found.", 404)
         storage.delete_owner_files(conn, services.storage, program.key, record_id)
+        if program.key == "preincubation":
+            support.delete_owner_entries(conn, program.key, record_id)
         if program.key == "incubation":
             conn.execute(delete(db.incubation_evaluations).where(db.incubation_evaluations.c.application_id == record_id))
         conn.execute(delete(program.table).where(program.table.c.id == record_id))

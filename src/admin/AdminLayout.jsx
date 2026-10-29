@@ -1,6 +1,7 @@
 import { ChevronRight, LogOut, Menu } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { Button } from "../components/ui";
 import { useAuth } from "../lib/auth-context";
 import { useApi } from "../lib/useApi";
@@ -44,6 +45,13 @@ function NavGroup({ item, open, onToggle, counts, onNavigate }) {
   );
 }
 
+// Each program has its own page tint so staff always know which area they're in.
+function sectionClass(pathname) {
+  if (pathname.startsWith("/admin/pre-incubation")) return "admin--preincubation";
+  if (pathname.startsWith("/admin/incubation")) return "admin--incubation";
+  return "";
+}
+
 export function AdminLayout() {
   const { session, logout } = useAuth();
   const { pathname } = useLocation();
@@ -63,7 +71,7 @@ export function AdminLayout() {
   const closeNav = useCallback(() => setNavOpen(false), []);
 
   return (
-    <div className={`admin ${navOpen ? "nav-open" : ""}`}>
+    <div className={`admin ${sectionClass(pathname)} ${navOpen ? "nav-open" : ""}`}>
       <a href="#admin-main" className="skip-link">
         Skip to content
       </a>
@@ -130,7 +138,9 @@ export function AdminLayout() {
           <span className="admin-topbar__title">AIC MUJ Staff</span>
         </div>
         <main id="admin-main" className="admin-content" tabIndex={-1}>
-          <Outlet context={{ summary: summary.data, refreshCounts }} />
+          <ErrorBoundary resetKey={pathname}>
+            <Outlet context={{ summary: summary.data, refreshCounts }} />
+          </ErrorBoundary>
         </main>
       </div>
     </div>

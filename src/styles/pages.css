@@ -29,7 +29,7 @@
   gap: var(--s-2);
   margin: 0 calc(var(--s-1) * -1);
   padding: var(--s-3) var(--s-1);
-  background: linear-gradient(to top, var(--paper) 70%, transparent);
+  background: linear-gradient(to top, var(--page-bg, var(--paper)) 70%, transparent);
 }
 
 @media (max-width: 640px) {
@@ -1704,4 +1704,293 @@
     color: inherit;
     text-decoration: none;
   }
+}
+
+/* ---------- Tabbed application pages ---------- */
+.page-tabs {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap; /* every section button stays visible on desktop */
+  gap: var(--s-1);
+  margin-bottom: var(--s-5);
+  padding: var(--s-1);
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  scrollbar-width: thin;
+}
+
+.page-tabs .tab {
+  flex: none;
+  padding: 8px var(--s-3);
+  border-radius: var(--r-md);
+  font-size: var(--text-sm);
+  transition: background var(--t-fast), color var(--t-fast);
+}
+
+.page-tabs .tab:hover {
+  background: var(--hover);
+}
+
+.page-tabs .tab[aria-selected="true"] {
+  background: var(--ink-900);
+  color: #fff;
+}
+
+.page-tabs .tab[aria-selected="true"]::after {
+  display: none;
+}
+
+.page-tabs .tab:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+.page-tabs .tab[aria-selected="true"] .tab__count {
+  background: var(--orange-500);
+  color: var(--ink-900);
+}
+
+
+.overview-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--s-3);
+}
+
+.overview-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  text-align: left;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+
+.overview-tile:hover {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-md);
+}
+
+.overview-tile:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+.overview-tile__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink-600);
+}
+
+.overview-tile__label svg {
+  width: 16px;
+  height: 16px;
+  color: var(--orange-700);
+}
+
+.overview-tile__value {
+  margin-top: var(--s-1);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.overview-tile__hint {
+  font-size: var(--text-xs);
+  color: var(--ink-500);
+}
+
+.overview-row {
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+/* ---------- Documents issued by AIC ---------- */
+.aic-docs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.aic-docs li {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-5);
+  border-bottom: 1px solid var(--line);
+}
+
+.aic-docs__icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-md);
+  background: var(--orange-50);
+  color: var(--orange-700);
+  flex: none;
+}
+
+.aic-docs__icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.aic-docs__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.aic-docs__title {
+  font-weight: 600;
+}
+
+.aic-docs__meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  color: var(--ink-600);
+}
+
+.aic-docs__sent {
+  font-size: var(--text-xs);
+  color: var(--ink-500);
+}
+
+.aic-docs__sent.is-sent {
+  color: var(--green-700);
+  font-weight: 500;
+}
+
+.aic-docs__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+
+.aic-docs__form {
+  padding: var(--s-5);
+  border-top: 1px solid var(--line);
+  background: var(--surface-sunken);
+  border-radius: 0 0 var(--r-lg) var(--r-lg);
+}
+
+.aic-docs ~ .aic-docs__form,
+.empty + .aic-docs__form {
+  border-top: 0;
+}
+
+.aic-docs__submit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-top: var(--s-4);
+}
+
+@media (max-width: 600px) {
+  .aic-docs li {
+    flex-wrap: wrap;
+    padding: var(--s-3) var(--s-4);
+  }
+
+  .aic-docs__actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .aic-docs__form {
+    padding: var(--s-4);
+  }
+
+  .aic-docs__submit .btn {
+    width: 100%;
+  }
+}
+
+/* ---------- Investors & mentors (reuse the .aic-docs list) ---------- */
+.support__headline {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--ink-700);
+}
+
+.support__notes {
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  color: var(--ink-600);
+  white-space: pre-line;
+}
+
+/* Full application kept off-screen for Print / PDF (tabs show one section). */
+.print-record {
+  position: absolute;
+  left: -12000px;
+  top: 0;
+  width: 900px;
+  padding: var(--s-6);
+  background: #fff;
+}
+
+.print-meta {
+  margin: -8px 0 var(--s-4);
+  color: var(--ink-600);
+}
+
+.print-files {
+  margin: 0;
+  padding-left: 18px;
+}
+
+/* html2canvas renders screen styles; show the print-only header in PDFs too. */
+.pdf-export .print-brand {
+  display: flex;
+}
+
+.pdf-export .print-only {
+  display: block;
+}
+
+@media print {
+  .print-record {
+    position: static;
+    width: auto;
+    padding: 0;
+  }
+
+  .page-tabs,
+  .tab-panel {
+    display: none !important;
+  }
+}
+
+/* ---------- Section backgrounds (staff workspace) ---------- */
+.admin-main {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--page-bg, var(--paper));
+  transition: background-color var(--t-med);
+}
+
+.admin--preincubation {
+  --page-bg: #EBE3FA; /* light purple */
+}
+
+.admin--incubation {
+  --page-bg: #FDE8D4; /* light orange */
 }

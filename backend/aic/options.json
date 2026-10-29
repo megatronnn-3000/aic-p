@@ -99,5 +99,8 @@
     { "key": "investmentTerms", "label": "Investment terms", "short": "Terms", "description": "Reasonable given stage, size of capital raise and prior investments." },
     { "key": "overallPresentation", "label": "Overall presentation / Q&A", "short": "Pitch", "description": "Clear, convincing, engaging, handled Q&A effectively, honest." }
   ],
-  "incubationScaleMax": 5
+  "incubationScaleMax": 5,
+  "investorTypes": ["Angel investor", "Venture capital", "Government / grant", "Corporate", "Accelerator / incubator", "Friends & family", "Other"],
+  "investmentInstruments": ["Equity", "Convertible note / SAFE", "Grant", "Debt", "Other"],
+  "mentorStatuses": ["Active", "Completed"]
 }

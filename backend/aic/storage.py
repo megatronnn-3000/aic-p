@@ -223,7 +223,7 @@ def build_storage(config):
     raise RuntimeError(f"Unknown STORAGE_BACKEND '{backend}' (use local, database or s3)")
 
 
-def save_uploads(conn, storage, owner_type, owner_id, uploads, written_keys):
+def save_uploads(conn, storage, owner_type, owner_id, uploads, written_keys, source=db.FILE_SOURCE_APPLICANT, title=None):
     """Persist validated uploads and their metadata rows. Keys written to external
     storage are appended to ``written_keys`` so callers can clean up on failure."""
     saved = []
@@ -242,6 +242,8 @@ def save_uploads(conn, storage, owner_type, owner_id, uploads, written_keys):
                 size=len(upload["data"]),
                 storage_key=key,
                 uploaded_at=db.utcnow(),
+                source=source,
+                title=title,
             )
         )
         saved.append({"id": result.inserted_primary_key[0], "field": upload["field"], "original_name": upload["original_name"]})
@@ -256,23 +258,31 @@ def discard_keys(storage, keys):
             pass
 
 
-def list_files(conn, owner_type, owner_id):
+def file_info(row):
+    stamp = db.serialize({"uploaded": row.uploaded_at, "emailed": row.emailed_at})
+    return {
+        "id": row.id,
+        "field": row.field,
+        "original_name": row.original_name,
+        "content_type": row.content_type,
+        "size": row.size,
+        "uploaded_at": stamp["uploaded"],
+        "source": row.source,
+        "title": row.title,
+        "emailed_at": stamp["emailed"],
+        "emailed_to": row.emailed_to,
+    }
+
+
+def list_files(conn, owner_type, owner_id, source=db.FILE_SOURCE_APPLICANT):
+    """Files owned by a record. Applicant-submitted and AIC-issued documents are
+    listed separately (``source``)."""
     rows = conn.execute(
         select(db.files)
-        .where(db.files.c.owner_type == owner_type, db.files.c.owner_id == owner_id)
+        .where(db.files.c.owner_type == owner_type, db.files.c.owner_id == owner_id, db.files.c.source == source)
         .order_by(db.files.c.id)
     ).all()
-    return [
-        {
-            "id": r.id,
-            "field": r.field,
-            "original_name": r.original_name,
-            "content_type": r.content_type,
-            "size": r.size,
-            "uploaded_at": db.serialize({"t": r.uploaded_at})["t"],
-        }
-        for r in rows
-    ]
+    return [file_info(r) for r in rows]
 
 
 def delete_owner_files(conn, storage, owner_type, owner_id):
@@ -287,13 +297,18 @@ def delete_owner_files(conn, storage, owner_type, owner_id):
 
 
 def build_zip(conn, storage, owner_type, owner_id, labels):
-    """Zip every file owned by a record. ``labels`` maps field -> readable prefix."""
+    """Zip the documents a record submitted (not AIC-issued ones).
+    ``labels`` maps field -> readable prefix."""
     buffer = io.BytesIO()
     used = set()
     count = 0
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         for row in conn.execute(
-            select(db.files).where(db.files.c.owner_type == owner_type, db.files.c.owner_id == owner_id)
+            select(db.files).where(
+                db.files.c.owner_type == owner_type,
+                db.files.c.owner_id == owner_id,
+                db.files.c.source == db.FILE_SOURCE_APPLICANT,
+            )
         ).all():
             try:
                 data = storage.get(row.storage_key, conn=conn)
