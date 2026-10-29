@@ -1,0 +1,13 @@
+# Local-only data and tooling. `vercel deploy` uploads the working directory, so
+# keep applicant records, uploaded documents and secrets out of it. (A deploy
+# from the Git integration only sees tracked files, which already exclude these.)
+backend/uploads
+backend/*.db
+backend/*.db-shm
+backend/*.db-wal
+backend/*.pre-upgrade-backup
+backend/venv
+backend/.venv
+backend/.pytest_cache
+.env
+.env.*

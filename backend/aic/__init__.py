@@ -31,7 +31,7 @@ def create_app(overrides=None):
     app.logger.setLevel(logging.INFO)
 
     if config["TRUST_PROXY"]:
-        # Render terminates TLS and forwards the client IP; needed for rate limiting.
+        # Render and Vercel terminate TLS and forward the client IP; needed for rate limiting.
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 
     origins = list(config["CORS_ORIGINS"])

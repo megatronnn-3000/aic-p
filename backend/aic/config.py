@@ -42,11 +42,18 @@ def load_config(overrides=None):
     if overrides:
         env.update({k: v for k, v in overrides.items() if isinstance(v, str)})
 
-    app_env = env.get("APP_ENV", "production" if env.get("RENDER") else "development")
+    # Render and Vercel terminate TLS in front of the app and forward the client IP.
+    hosted = bool(env.get("RENDER") or env.get("VERCEL"))
+    app_env = env.get("APP_ENV", "production" if hosted else "development")
 
     database_url = env.get("DATABASE_URL") or f"sqlite:///{(BACKEND_DIR / 'startups.db').as_posix()}"
     database_url = normalize_database_url(database_url)
     is_sqlite = database_url.startswith("sqlite")
+    if is_sqlite and env.get("VERCEL_ENV") in {"production", "preview"}:
+        raise RuntimeError(
+            "DATABASE_URL is not set. Vercel's filesystem is read-only, so the SQLite fallback cannot work "
+            "there; set DATABASE_URL to a hosted PostgreSQL database (Neon, Supabase)."
+        )
 
     s3_bucket = env.get("S3_BUCKET", "")
     storage_backend = env.get("STORAGE_BACKEND", "").strip().lower()
@@ -77,7 +84,7 @@ def load_config(overrides=None):
         or ["http://localhost:5173", "http://127.0.0.1:5173", "https://pre-incubation-ui.vercel.app"],
         # Vercel preview deployments get unique sub-domains.
         "CORS_ORIGIN_REGEX": env.get("CORS_ORIGIN_REGEX", r"https://pre-incubation[a-z0-9-]*\.vercel\.app"),
-        "TRUST_PROXY": _bool(env.get("TRUST_PROXY"), default=bool(env.get("RENDER"))),
+        "TRUST_PROXY": _bool(env.get("TRUST_PROXY"), default=hosted),
         "MAIL_PROVIDER": env.get("MAIL_PROVIDER", "").strip().lower(),
         "MAIL_FROM": env.get("MAIL_FROM", ""),
         "MAIL_FROM_NAME": env.get("MAIL_FROM_NAME", "AIC MUJ Incubation Foundation"),
@@ -88,7 +95,9 @@ def load_config(overrides=None):
         "SMTP_PORT": _int(env.get("SMTP_PORT"), 587),
         "SMTP_USERNAME": env.get("SMTP_USERNAME", ""),
         "SMTP_PASSWORD": env.get("SMTP_PASSWORD", ""),
-        "MAIL_ASYNC": _bool(env.get("MAIL_ASYNC"), default=True),
+        # A serverless function can be frozen once the response is sent, which would
+        # strand a background mail thread, so Vercel sends inline by default.
+        "MAIL_ASYNC": _bool(env.get("MAIL_ASYNC"), default=not env.get("VERCEL")),
         "MAX_FILE_MB": _int(env.get("MAX_FILE_MB"), 20),
         "MAX_REQUEST_MB": _int(env.get("MAX_REQUEST_MB"), 80),
         # Email providers reject large messages; Brevo and Gmail cap well below 25 MB.

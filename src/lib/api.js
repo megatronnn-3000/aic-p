@@ -1,16 +1,16 @@
 /**
  * API client.
  *
+ * The API is served from the same origin as the app (Vercel routes /api/* to
+ * the Flask service; in development Vite proxies it), so requests use relative
+ * paths. VITE_API_URL only needs setting when the API is hosted elsewhere.
+ *
  * Staff requests carry a bearer token (stored in localStorage) instead of a
- * cookie: the frontend and API live on different sites and Safari blocks
- * third-party cookies. Requests that take more than a few seconds flag the
+ * cookie, so the API also works from a different site (Safari blocks
+ * third-party cookies). Requests that take more than a few seconds flag the
  * app as "waiting for the server" so the UI can explain free-tier cold starts.
  */
-const DEFAULT_PRODUCTION_API = "https://pre-incubation-backend.onrender.com";
-
-export const API_BASE = (
-  import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "" : DEFAULT_PRODUCTION_API)
-).replace(/\/+$/, "");
+export const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/+$/, "");
 
 const SESSION_KEY = "aic.staff.session";
 const SLOW_AFTER_MS = 4000;
