@@ -1967,6 +1967,10 @@
 }
 
 @media print {
+  .admin-main {
+    overflow: visible;
+  }
+
   .print-record {
     position: static;
     width: auto;
@@ -1981,6 +1985,11 @@
 
 /* ---------- Section backgrounds (staff workspace) ---------- */
 .admin-main {
+  /* Contain the off-screen .print-record: without this it is positioned against
+     the whole document and a long record leaves empty scroll space below the page.
+     `clip` (unlike `hidden`) isn't a scroll container, so sticky bars still work. */
+  position: relative;
+  overflow: clip;
   min-height: 100vh;
   min-height: 100dvh;
   background: var(--page-bg, var(--paper));
